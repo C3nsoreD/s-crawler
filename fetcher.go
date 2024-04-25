@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -17,13 +18,26 @@ type fetch struct {
 	fetched map[string]bool
 }
 
-func (f fetch) Fetch(url string) ([]string, error) {
+func (f fetch) Fetch(url string, useCache bool) ([]string, error) {
 	urls := []string{}
+	if useCache {
+		url = GOOGLE_CACHE + url
+	}
+	ctx := context.Background()
 
-	res, err := http.Get(url)
+	c := client()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Referer", "http://www.google.com/")
+
+	res, err := c.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
